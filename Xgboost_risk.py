@@ -31,8 +31,8 @@ cleaned_df = raw_df.copy()
 
 cleaned_df = cleaned_df.drop(columns=["GISID", "BUILD_Y", "year", "DOT_FREQ"])
 
-train_df, test_df = train_test_split(cleaned_df, test_size=0.2)
-train_df, val_df = train_test_split(train_df, test_size=0.2)
+train_df, test_df = train_test_split(cleaned_df, test_size=0.2, random_state=110)
+train_df, val_df = train_test_split(train_df, test_size=0.2, random_state=110)
 
 
 train_labels = np.array(train_df.pop('LEAK_CHK'))
@@ -74,9 +74,17 @@ def make_model(metrics=METRICS, output_bias=None):
         output_bias = tf.keras.initializers.Constant(output_bias)
     model = keras.Sequential([
         keras.layers.Dense(
-            16, activation='relu',
+            32, activation='relu',
             input_shape=(train_features.shape[-1],)),
+        keras.layers.Dense(
+            32, activation='relu'),
         keras.layers.Dropout(0.3),
+        keras.layers.Dense(
+            16, activation='relu'),
+        keras.layers.Dense(
+            16, activation='relu'),
+        keras.layers.Dense(
+            8, activation='relu'),
         keras.layers.Dense(1, activation='sigmoid',
                            bias_initializer=output_bias)
     ])
@@ -89,7 +97,7 @@ def make_model(metrics=METRICS, output_bias=None):
     return model
 
 EPOCHS = 500
-BATCH_SIZE = 512
+BATCH_SIZE = 1024
 early_stopping = tf.keras.callbacks.EarlyStopping(
     monitor='val_auc',
     verbose=1,
@@ -108,9 +116,9 @@ initial_weights = os.path.join(tempfile.mkdtemp(), 'initial_weights')
 model.save_weights(initial_weights)
 
 
-model = make_model()
-model.load_weights(initial_weights)
-baseline_history = model.fit(
+model_new = make_model()
+model_new.load_weights(initial_weights)
+baseline_history = model_new.fit(
     train_features,
     train_labels,
     batch_size=BATCH_SIZE,
@@ -141,7 +149,7 @@ plot_metrics(baseline_history)
 
 def plot_cm(labels, predictions, p=0.5):
     cm = confusion_matrix(labels, predictions > p)
-    plt.figure(figsize=(5,5))
+    plt.figure(figsize=(5, 5))
     sns.heatmap(cm, annot=True, fmt="d")
     print('Total f1score: ', (2 * (cm[1][1]/(cm[1][1]+cm[0][1]))*(cm[1][1]/(cm[1][1]+cm[1][0])))/((cm[1][1]/(cm[1][1]+cm[0][1]))+(cm[1][1]/(cm[1][1]+cm[1][0]))))
     print('Recall: ', (cm[1][1]/(cm[1][1]+cm[1][0])))
@@ -156,11 +164,11 @@ def plot_cm(labels, predictions, p=0.5):
     print('Fraudulent Transactions Detected (True Positives): ', cm[1][1])
     print('Total Fraudulent Transactions: ', np.sum(cm[1]))
 
-test_predictions_weighted = model.predict(test_features, batch_size=BATCH_SIZE)
+test_predictions_weighted = model_new.predict(test_features, batch_size=BATCH_SIZE)
 
-weighted_results = model.evaluate(test_features, test_labels,
+weighted_results = model_new.evaluate(test_features, test_labels,
                                            batch_size=BATCH_SIZE, verbose=0)
-for name, value in zip(model.metrics_names, weighted_results):
+for name, value in zip(model_new.metrics_names, weighted_results):
     print(name, ': ', value)
 print()
 
