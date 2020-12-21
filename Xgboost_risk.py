@@ -102,7 +102,6 @@ early_stopping = tf.keras.callbacks.EarlyStopping(
     mode='max',
     restore_best_weights=True)
 
-
 initial_bias = np.log([nusu/normal])
 
 
