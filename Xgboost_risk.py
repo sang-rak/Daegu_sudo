@@ -16,19 +16,16 @@ colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
 # data load
 file = tf.keras.utils
-raw_df_base = pd.read_csv('C:/Users/user/Desktop/TIMC/송수관,배수관 분석/XGBoost Classifier/3년치 데이터/학습용/data_xg_ds_before_3y.csv')
+raw_df_base = pd.read_csv('C:/Users/user/Desktop/TIMC/송수관,배수관 분석/Classifier/3년치 데이터/학습용/data_xg_ds_before_3y.csv')
 
 # data preprocessing
 onehot_cols = ['SAA_CDE', 'MOP_CD', 'DRNG_CD', 'DBTG_CD', 'USEG_CD', 'ROAD_CD']
-onehot_cols_df =raw_df_base[onehot_cols]
 raw_df = pd.get_dummies(raw_df_base, columns=onehot_cols)
 
 normal, nusu = np.bincount(raw_df['LEAK_CHK'])
 total = normal + nusu
 
 cleaned_df = raw_df.copy()
-
-
 cleaned_df = cleaned_df.drop(columns=["GISID", "BUILD_Y", "year", "DOT_FREQ"])
 
 train_df, test_df = train_test_split(cleaned_df, test_size=0.2, random_state=110)
@@ -78,7 +75,7 @@ def make_model(metrics=METRICS, output_bias=None):
             input_shape=(train_features.shape[-1],)),
         keras.layers.Dense(
             32, activation='relu'),
-        keras.layers.Dropout(0.3),
+        keras.layers.Dropout(0.2),
         keras.layers.Dense(
             16, activation='relu'),
         keras.layers.Dense(
@@ -173,3 +170,24 @@ for name, value in zip(model_new.metrics_names, weighted_results):
 print()
 
 plot_cm(test_labels, test_predictions_weighted)
+
+#위험도 데이터셋 load
+raw_df_base_Risk = pd.read_csv('C:/Users/user/Desktop/TIMC/송수관,배수관 분석/Classifier/3년치 데이터/위험도용/data_xg_ds_now_3y.csv')
+
+onehot_cols_Risk = ['SAA_CDE', 'MOP_CD', 'DRNG_CD', 'DBTG_CD', 'USEG_CD', 'ROAD_CD']
+raw_df_Risk = pd.get_dummies(raw_df_base_Risk, columns=onehot_cols_Risk)
+
+cleaned_df_Risk = raw_df_Risk.copy()
+cleaned_df_Risk = cleaned_df_Risk.drop(columns=["GISID", "BUILD_Y", "year"])
+test_labels_Risk = np.array(cleaned_df_Risk.pop('LEAK_CHK'))
+test_features_Risk = np.array(cleaned_df_Risk)
+
+scaler = MinMaxScaler()
+
+test_features_Rist_min = scaler.fit_transform(test_features_Risk)
+remain_Risk_df = model_new.predict(test_features_Rist_min, batch_size=BATCH_SIZE)
+remain_Risk = raw_df_Risk.copy()
+remain_Risk['remain_life'] = remain_Risk_df
+
+#결과값 저장
+remain_Risk.to_csv('C:/Users/user/Desktop/TIMC/송수관,배수관 분석/1차안/3년치_S/DNN_predict_final.csv', index=False, encoding='cp949')
