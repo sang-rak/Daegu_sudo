@@ -1,5 +1,5 @@
-# Daegu_sudo
-대구 상수도 누수예측 NGBOOST 모델입니다.
+# Gumi_sudo
+구미상수도 누수예측 NGBOOST 모델입니다.
 
 
 
